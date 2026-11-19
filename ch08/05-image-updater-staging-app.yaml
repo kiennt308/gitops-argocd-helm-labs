@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: orderflow-dev-image-auto
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: >-
+      api=nginx:1.27-alpine
+    argocd-image-updater.argoproj.io/api.update-strategy: semver
+    argocd-image-updater.argoproj.io/api.allow-tags: "regexp:^1\\.27\\."
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+spec:
+  project: orderflow-apps
+  source:
+    repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+    targetRevision: main
+    path: code-labs/charts/orderflow-service
+    helm:
+      releaseName: order-service
+      valueFiles:
+        - ../../ch02/values-order-service.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: orderflow-staging
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

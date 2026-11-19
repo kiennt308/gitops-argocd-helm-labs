@@ -1,0 +1,5 @@
+{
+  "service": "payment-worker",
+  "valuesFile": "values-payment-worker.yaml",
+  "chartRevision": "main"
+}

@@ -1,0 +1,91 @@
+nameOverride: order-service
+fullnameOverride: ""
+component: api
+
+replicaCount: 2
+revisionHistoryLimit: 5
+terminationGracePeriodSeconds: 30
+preStopSleepSeconds: 5
+
+image:
+  repository: nginx
+  tag: "1.27-alpine"
+  pullPolicy: IfNotPresent
+
+nginxMode: true
+command: []
+args: []
+
+serviceAccount:
+  create: true
+  name: ""
+  automount: false
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+podAnnotations: {}
+commonLabels: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+probes:
+  type: http
+  path: /healthz
+  execCommand:
+    - test
+    - -f
+    - /tmp/healthy
+
+config:
+  enabled: true
+  data:
+    LOG_LEVEL: info
+    ORDERFLOW_ENV: staging
+
+env: []
+envFrom: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+httpRoute:
+  enabled: false
+  parentRefs:
+    - name: orderflow-gateway
+      namespace: orderflow-prod
+  hostnames:
+    - orders.orderflow.internal
+  pathPrefix: /api/v1/orders
+
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: orderflow
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress: []
+
+extraVolumeMounts: []
+extraVolumes: []

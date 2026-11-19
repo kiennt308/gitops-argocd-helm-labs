@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service-ping
+  namespace: orderflow-prod
+  labels:
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/part-of: orderflow
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/part-of: orderflow
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service-pong
+  namespace: orderflow-prod
+  labels:
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/part-of: orderflow
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/part-of: orderflow
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: order-service-pingpong
+  namespace: orderflow-prod
+  labels:
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/part-of: orderflow
+spec:
+  replicas: 4
+  workloadRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  strategy:
+    canary:
+      pingPong:
+        pingService: order-service-ping
+        pongService: order-service-pong
+      trafficRouting:
+        plugins:
+          argoproj-labs/gatewayapi:
+            httpRoute: order-service-route
+            namespace: orderflow-prod
+      steps:
+        - setWeight: 10
+        - pause:
+            duration: 2m
+        - setWeight: 50
+        - pause:
+            duration: 5m

@@ -1,0 +1,58 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: orderflow
+  annotations:
+    kargo.akuity.io/color: emerald
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: order-service-warehouse
+      sources:
+        stages:
+          - staging
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+            checkout:
+              - branch: env/orderflow-prod
+                path: ./src
+        - uses: yaml-update
+          as: update-prod-tag
+          config:
+            path: ./src/environments/prod/order-service/values.yaml
+            updates:
+              - key: image.tag
+                value: ${{ imageFrom("ghcr.io/kiennt308/order-service").Tag }}
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./src
+            messageFromSteps:
+              - update-prod-tag
+        - uses: git-push
+          as: push
+          config:
+            path: ./src
+            generateTargetBranch: true
+        - uses: git-open-pr
+          as: open-pr
+          config:
+            repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+            sourceBranch: ${{ outputs.push.branch }}
+            targetBranch: env/orderflow-prod
+            title: "promote(prod): order-service verified freight"
+        - uses: git-wait-for-pr
+          config:
+            repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+            prNumber: ${{ outputs['open-pr'].pr.id }}
+        - uses: argocd-update
+          config:
+            apps:
+              - name: orderflow-prod-api
+                namespace: argocd

@@ -1,0 +1,44 @@
+name: Publish and Sign OrderFlow Helm OCI Chart
+
+on:
+  push:
+    tags:
+      - "chart-v*"
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+jobs:
+  release-signed-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Helm 4.3.2 and Cosign 3.1.4
+        run: |
+          curl -fsSL https://get.helm.sh/helm-v4.3.2-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin --strip-components=1 linux-amd64/helm
+          curl -fsSL -o /usr/local/bin/cosign \
+            https://github.com/sigstore/cosign/releases/download/v3.1.4/cosign-linux-amd64
+          chmod +x /usr/local/bin/cosign
+      - name: Lint and package chart
+        working-directory: code-labs/charts/orderflow-service
+        run: |
+          helm dependency build
+          helm lint --strict -f ../../ch02/values-order-service.yaml
+          helm package . -d /tmp/dist
+      - name: Push OCI chart and sign digest with Cosign v3 bundle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GITHUB_TOKEN" | helm registry login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
+          PUSH_OUT=$(helm push /tmp/dist/orderflow-service-1.4.0.tgz \
+            oci://ghcr.io/kiennt308/charts 2>&1)
+          DIGEST=$(echo "$PUSH_OUT" | grep -Eo 'sha256:[a-f0-9]{64}' | tail -n1)
+          REF="ghcr.io/kiennt308/charts/orderflow-service@${DIGEST}"
+          cosign sign --yes "$REF"
+          cosign verify "$REF" \
+            --certificate-identity-regexp="https://github.com/kiennt308/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com"

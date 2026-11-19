@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: orderflow-staging-services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - git:
+        repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+        revision: main
+        files:
+          - path: code-labs/ch04/fleet-config/*/config.json
+  template:
+    metadata:
+      name: "staging-{{.service}}"
+    spec:
+      project: orderflow-apps
+      source:
+        repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+        targetRevision: main
+        path: code-labs/charts/orderflow-service
+        helm:
+          releaseName: "{{.service}}"
+          valueFiles:
+            - "../../ch02/{{.valuesFile}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: orderflow-staging
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

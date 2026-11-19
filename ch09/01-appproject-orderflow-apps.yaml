@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: orderflow-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Application workloads for OrderFlow Commerce Platform
+  sourceRepos:
+    - https://github.com/kiennt308/gitops-argocd-helm-labs.git
+    - ghcr.io/kiennt308/charts
+  sourceNamespaces:
+    - argocd
+  destinations:
+    - namespace: orderflow-staging
+      server: https://kubernetes.default.svc
+    - namespace: orderflow-prod
+      server: https://kubernetes.default.svc
+    - namespace: orderflow-canary
+      server: https://kubernetes.default.svc
+    - namespace: "orderflow-*"
+      name: "orderflow-*"
+  clusterResourceWhitelist: []
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+    - group: ""
+      kind: LimitRange
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+  roles:
+    - name: release-operator
+      description: Sync and inspect OrderFlow applications
+      policies:
+        - p, proj:orderflow-apps:release-operator, applications, get, orderflow-apps/*, allow
+        - p, proj:orderflow-apps:release-operator, applications, sync, orderflow-apps/*, allow
+      groups:
+        - orderflow-developers

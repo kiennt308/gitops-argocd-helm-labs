@@ -1,0 +1,5 @@
+{
+  "service": "order-gateway",
+  "valuesFile": "values-order-gateway.yaml",
+  "chartRevision": "main"
+}

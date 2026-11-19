@@ -1,0 +1,35 @@
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: orderflow-local-fake-store
+  namespace: orderflow-staging
+spec:
+  provider:
+    fake:
+      data:
+        - key: orderflow/staging/order-service
+          value: '{"username":"orderflow_app","password":"mock-staging-value"}'
+          version: "v1"
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: order-service-staging-creds
+  namespace: orderflow-staging
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: orderflow-local-fake-store
+    kind: SecretStore
+  target:
+    name: order-service-staging-creds
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_USERNAME
+      remoteRef:
+        key: orderflow/staging/order-service
+        property: username
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: orderflow/staging/order-service
+        property: password

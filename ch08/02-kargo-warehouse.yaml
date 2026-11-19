@@ -1,0 +1,21 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: order-service-warehouse
+  namespace: orderflow
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+    - image:
+        repoURL: ghcr.io/kiennt308/order-service
+        imageSelectionStrategy: SemVer
+        semverConstraint: ">=2.4.0 <3.0.0"
+    - chart:
+        repoURL: oci://ghcr.io/kiennt308/charts/orderflow-service
+        semverConstraint: "^1.4.0"
+    - git:
+        repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+        branch: main
+        includePaths:
+          - code-labs/ch02/values-order-service.yaml

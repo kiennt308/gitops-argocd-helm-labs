@@ -1,0 +1,18 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: orderflow
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: orderflow
+  namespace: orderflow
+spec:
+  promotionPolicies:
+    - stageSelector:
+        name: staging
+      autoPromotionEnabled: true
+    - stageSelector:
+        name: prod
+      autoPromotionEnabled: false

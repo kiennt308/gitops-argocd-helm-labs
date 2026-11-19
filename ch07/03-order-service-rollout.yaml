@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: order-service
+  namespace: orderflow-prod
+  labels:
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/part-of: orderflow
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  workloadRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  strategy:
+    canary:
+      canaryService: order-service-canary
+      stableService: order-service-stable
+      trafficRouting:
+        plugins:
+          argoproj-labs/gatewayapi:
+            httpRoute: order-service-route
+            namespace: orderflow-prod
+      analysis:
+        templates:
+          - templateName: order-service-canary-gate
+        startingStep: 1
+        args:
+          - name: service-name
+            value: order-service-canary
+          - name: namespace
+            value: orderflow-prod
+      steps:
+        - setWeight: 10
+        - pause:
+            duration: 2m
+        - setWeight: 25
+        - pause:
+            duration: 5m
+        - setWeight: 50
+        - pause:
+            duration: 5m

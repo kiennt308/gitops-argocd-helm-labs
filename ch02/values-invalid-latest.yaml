@@ -1,0 +1,22 @@
+# Negative schema fixture — intentionally violates values.schema.json
+nameOverride: order-service
+component: api
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: "latest"
+
+podSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
+  fsGroup: 0
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi

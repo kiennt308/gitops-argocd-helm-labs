@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: orderflow-prod-api
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: orderflow-apps
+  source:
+    repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+    targetRevision: v1.4.0
+    path: code-labs/charts/orderflow-service
+    helm:
+      releaseName: order-service
+      valueFiles:
+        - ../../ch02/values-order-service.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: orderflow-prod
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - PruneLast=true

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service-ssa-demo
+  namespace: orderflow-staging
+  labels:
+    app.kubernetes.io/name: order-service-ssa-demo
+    app.kubernetes.io/part-of: orderflow
+  annotations:
+    argocd.argoproj.io/tracking-id: >-
+      orderflow-staging-api:apps/Deployment:orderflow-staging/order-service-ssa-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-service-ssa-demo
+      app.kubernetes.io/part-of: orderflow
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: order-service-ssa-demo
+        app.kubernetes.io/part-of: orderflow
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: order-service
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - touch /tmp/healthy && sleep 3600
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi

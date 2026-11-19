@@ -1,0 +1,48 @@
+suite: test Gateway API HTTPRoute and PodDisruptionBudget
+templates:
+  - templates/httproute.yaml
+  - templates/pdb.yaml
+release:
+  name: order-service
+  namespace: orderflow-prod
+tests:
+  - it: omits HTTPRoute when disabled by default
+    template: templates/httproute.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders Gateway API v1 HTTPRoute when enabled
+    template: templates/httproute.yaml
+    set:
+      httpRoute.enabled: true
+      httpRoute.pathPrefix: /api/v1/orders
+      httpRoute.hostnames:
+        - api.orderflow.example.com
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HTTPRoute
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+      - equal:
+          path: spec.rules[0].matches[0].path.value
+          value: /api/v1/orders
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: order-service
+
+  - it: renders policy/v1 PodDisruptionBudget with part-of selector
+    template: templates/pdb.yaml
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - isAPIVersion:
+          of: policy/v1
+      - equal:
+          path: spec.minAvailable
+          value: 1
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/part-of"]
+          value: orderflow

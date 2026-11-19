@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: order-service-canary-gate
+  namespace: orderflow-prod
+spec:
+  args:
+    - name: service-name
+    - name: namespace
+  metrics:
+    - name: http-5xx-ratio
+      interval: 30s
+      count: 4
+      failureLimit: 1
+      successCondition: result[0] <= 0.01
+      provider:
+        prometheus:
+          address: http://prometheus-operated.monitoring.svc:9090
+          query: |
+            sum(rate(http_requests_total{
+              namespace="{{args.namespace}}",
+              service="{{args.service-name}}",
+              status=~"5.."
+            }[2m])) /
+            clamp_min(sum(rate(http_requests_total{
+              namespace="{{args.namespace}}",
+              service="{{args.service-name}}"
+            }[2m])), 1)
+    - name: http-p95-latency-seconds
+      interval: 30s
+      count: 4
+      failureLimit: 1
+      successCondition: result[0] <= 0.25
+      provider:
+        prometheus:
+          address: http://prometheus-operated.monitoring.svc:9090
+          query: |
+            histogram_quantile(0.95, sum(rate(
+              http_request_duration_seconds_bucket{
+                namespace="{{args.namespace}}",
+                service="{{args.service-name}}"
+              }[2m])) by (le))

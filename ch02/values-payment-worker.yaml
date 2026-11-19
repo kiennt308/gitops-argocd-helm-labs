@@ -1,0 +1,46 @@
+nameOverride: payment-worker
+component: worker
+replicaCount: 2
+
+image:
+  repository: busybox
+  tag: "1.37"
+  pullPolicy: IfNotPresent
+
+nginxMode: false
+command:
+  - sh
+  - -c
+  - touch /tmp/healthy && while true; do sleep 30; done
+
+service:
+  enabled: false
+
+probes:
+  type: exec
+  execCommand:
+    - test
+    - -f
+    - /tmp/healthy
+
+config:
+  enabled: true
+  data:
+    QUEUE_NAME: orderflow-payments
+    CONCURRENCY: "4"
+
+httpRoute:
+  enabled: false
+
+networkPolicy:
+  enabled: true
+  ingress: []
+  egress: []
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi

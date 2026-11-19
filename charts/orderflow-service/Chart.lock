@@ -1,0 +1,6 @@
+dependencies:
+- name: orderflow-lib
+  repository: file://../orderflow-lib
+  version: 1.0.0
+digest: sha256:dbe072672a34448a247dd565ae630e6353b07f60e528f45cae523aec29b30432
+generated: "2026-11-19T04:58:02.201713026Z"

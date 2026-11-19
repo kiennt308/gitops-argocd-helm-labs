@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: order-service-hydrated-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: orderflow-apps
+  sourceHydrator:
+    drySource:
+      repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+      targetRevision: main
+      path: code-labs/charts/orderflow-service
+      helm:
+        releaseName: order-service
+        valueFiles:
+          - ../../ch02/values-order-service.yaml
+    syncSource:
+      targetBranch: env/orderflow-prod
+      path: environments/prod/order-service
+    hydrateTo:
+      targetBranch: env/orderflow-prod-next
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: orderflow-prod
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true

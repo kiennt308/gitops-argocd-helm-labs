@@ -1,0 +1,40 @@
+nameOverride: order-service
+component: api
+replicaCount: 2
+
+image:
+  repository: nginx
+  tag: "1.27-alpine"
+  pullPolicy: IfNotPresent
+
+nginxMode: true
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+config:
+  enabled: true
+  data:
+    LOG_LEVEL: info
+    DB_PORT: "5432"
+    REDIS_PORT: "6379"
+
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: orderflow-gateway
+      namespace: orderflow-prod
+  hostnames:
+    - api.orderflow.example.com
+  pathPrefix: /api/v1/orders
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi

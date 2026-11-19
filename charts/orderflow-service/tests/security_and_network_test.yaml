@@ -1,0 +1,60 @@
+suite: test PSA restricted security and zero-trust network policy
+templates:
+  - templates/deployment.yaml
+  - templates/serviceaccount.yaml
+  - templates/networkpolicy.yaml
+release:
+  name: order-service
+  namespace: orderflow-prod
+tests:
+  - it: enforces Pod Security Admission restricted fields
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          content: ALL
+
+  - it: disables ServiceAccount token automount by default
+    template: templates/serviceaccount.yaml
+    asserts:
+      - isKind:
+          of: ServiceAccount
+      - equal:
+          path: automountServiceAccountToken
+          value: false
+
+  - it: enforces explicit Ingress and Egress with DNS allowlist
+    template: templates/networkpolicy.yaml
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - contains:
+          path: spec.policyTypes
+          content: Ingress
+      - contains:
+          path: spec.policyTypes
+          content: Egress
+      - equal:
+          path: spec.egress[0].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: kube-system
+      - equal:
+          path: spec.egress[0].ports[0].port
+          value: 53

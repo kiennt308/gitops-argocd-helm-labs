@@ -1,0 +1,50 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-control-plane-metrics
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: argocd
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: argocd-gitops-health-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: argocd.reconciliation.rules
+      rules:
+        - alert: ArgoCDAppDegradedOrOutOfSync
+          expr: |
+            argocd_app_info{health_status!="Healthy"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Argo CD application degraded for > 15m"
+        - alert: ArgoCDGitApiRateErrors
+          expr: |
+            increase(argocd_git_request_total{request_type="ls-remote"}[10m]) > 200
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High Git polling rate detected; verify webhooks"
+        - alert: ArgoCDControllerWorkqueueDepthHigh
+          expr: |
+            max(workqueue_depth{name="app_reconciliation_queue"}) > 50
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Application controller reconciliation backlog > 50"

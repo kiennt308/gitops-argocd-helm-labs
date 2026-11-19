@@ -1,0 +1,13 @@
+apiVersion: v2
+name: orderflow-service
+description: OrderFlow microservice application chart powered by orderflow-lib
+type: application
+version: 1.4.0
+appVersion: "2.4.0"
+dependencies:
+  - name: orderflow-lib
+    version: 1.0.0
+    repository: "file://../orderflow-lib"
+maintainers:
+  - name: Kien Nguyen
+    url: https://github.com/kiennt308/gitops-argocd-helm-labs

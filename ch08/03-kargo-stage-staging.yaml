@@ -1,0 +1,48 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: staging
+  namespace: orderflow
+  annotations:
+    kargo.akuity.io/color: amber
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: order-service-warehouse
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+            checkout:
+              - branch: main
+                path: ./src
+        - uses: yaml-update
+          as: update-values
+          config:
+            path: ./src/code-labs/ch02/values-order-service.yaml
+            updates:
+              - key: image.tag
+                value: ${{ imageFrom("ghcr.io/kiennt308/order-service").Tag }}
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./src
+            messageFromSteps:
+              - update-values
+        - uses: git-push
+          config:
+            path: ./src
+        - uses: argocd-update
+          config:
+            apps:
+              - name: orderflow-staging-api
+                namespace: argocd
+  verification:
+    analysisTemplates:
+      - name: order-service-canary-gate
+        kind: AnalysisTemplate

@@ -1,0 +1,10 @@
+creation_rules:
+  - path_regex: ^environments/prod/.*\.enc\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    kms: arn:aws:kms:us-east-1:111122223333:alias/orderflow-gitops-sops
+    age: >-
+      age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+  - path_regex: ^environments/staging/.*\.enc\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: >-
+      age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p

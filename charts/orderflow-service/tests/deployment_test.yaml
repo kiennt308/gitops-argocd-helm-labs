@@ -1,0 +1,73 @@
+suite: test orderflow-service deployment contract
+templates:
+  - templates/deployment.yaml
+release:
+  name: order-service
+  namespace: orderflow-staging
+tests:
+  - it: renders a valid apps/v1 Deployment with mandatory selectors
+    asserts:
+      - isKind:
+          of: Deployment
+      - isAPIVersion:
+          of: apps/v1
+      - equal:
+          path: metadata.name
+          value: order-service
+      - equal:
+          path: spec.replicas
+          value: 2
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: order-service
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/part-of"]
+          value: orderflow
+      - isNotEmpty:
+          path: spec.template.metadata.annotations["checksum/config"]
+
+  - it: supports order-gateway nameOverride cleanly
+    set:
+      nameOverride: order-gateway
+      component: edge
+      replicaCount: 3
+    release:
+      name: order-gateway
+    asserts:
+      - equal:
+          path: metadata.name
+          value: order-gateway
+      - equal:
+          path: spec.replicas
+          value: 3
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: order-gateway
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: edge
+
+  - it: supports exec probes for headless worker workloads
+    set:
+      nameOverride: payment-worker
+      component: worker
+      nginxMode: false
+      image.repository: busybox
+      image.tag: "1.37"
+      service.enabled: false
+      probes.type: exec
+      probes.execCommand:
+        - test
+        - -f
+        - /tmp/healthy
+    release:
+      name: payment-worker
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: busybox:1.37
+      - isNull:
+          path: spec.template.spec.containers[0].ports
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command[0]
+          value: test

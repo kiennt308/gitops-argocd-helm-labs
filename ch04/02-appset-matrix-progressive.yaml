@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: orderflow-fleet-delivery
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+        - matchExpressions:
+            - key: env
+              operator: In
+              values:
+                - staging
+          maxUpdate: 100%
+        - matchExpressions:
+            - key: wave
+              operator: In
+              values:
+                - canary-prod
+          maxUpdate: 1
+        - matchExpressions:
+            - key: wave
+              operator: In
+              values:
+                - global-prod
+          maxUpdate: 50%
+  generators:
+    - matrix:
+        generators:
+          - git:
+              repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+              revision: main
+              files:
+                - path: code-labs/ch04/fleet-config/*/config.json
+          - clusters:
+              selector:
+                matchLabels:
+                  orderflow-tier: app
+  template:
+    metadata:
+      name: "{{.service}}-{{.name}}"
+      labels:
+        env: "{{.metadata.labels.env}}"
+        region: "{{.metadata.labels.region}}"
+        wave: '{{index .metadata.labels "wave" | default "staging"}}'
+    spec:
+      project: orderflow-apps
+      source:
+        repoURL: https://github.com/kiennt308/gitops-argocd-helm-labs.git
+        targetRevision: "{{.chartRevision}}"
+        path: code-labs/charts/orderflow-service
+        helm:
+          releaseName: "{{.service}}"
+          valueFiles:
+            - "../../ch02/{{.valuesFile}}"
+      destination:
+        server: "{{.server}}"
+        namespace: "orderflow-{{.metadata.labels.env}}"
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=false
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true

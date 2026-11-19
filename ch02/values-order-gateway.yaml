@@ -1,0 +1,59 @@
+nameOverride: order-gateway
+component: edge
+replicaCount: 2
+
+image:
+  repository: nginx
+  tag: "1.27-alpine"
+  pullPolicy: IfNotPresent
+
+nginxMode: true
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+config:
+  enabled: true
+  data:
+    LOG_LEVEL: info
+    EDGE_MODE: strict-tls
+
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: orderflow-gateway
+      namespace: orderflow-prod
+  hostnames:
+    - shop.orderflow.example.com
+  pathPrefix: /
+
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: orderflow
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: order-service
+              app.kubernetes.io/part-of: orderflow
+      ports:
+        - protocol: TCP
+          port: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
